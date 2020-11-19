@@ -1,0 +1,87 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-kapt'
+
+android {
+    compileSdkVersion versions.application.compileSdk
+    buildToolsVersion versions.application.buildTools
+
+    defaultConfig {
+        applicationId "com.senyk.volodymyr.tiktoklike"
+        minSdkVersion versions.application.minSdk
+        targetSdkVersion versions.application.targetSdk
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+            shrinkResources false
+            debuggable true
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8.toString()
+    }
+
+    buildFeatures {
+        dataBinding = true
+    }
+
+    androidExtensions {
+        experimental = true
+    }
+
+    applicationVariants.all { variant ->
+        variant.resValue "string", "versionName", "Version " + variant.versionName
+    }
+}
+
+dependencies {
+    // Kotlin
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$versions.kotlin.language"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$versions.kotlin.language"
+
+    // androidx
+    implementation "androidx.core:core:$versions.kotlin.ktx"
+    implementation "androidx.core:core-ktx:$versions.kotlin.ktx"
+    implementation "androidx.appcompat:appcompat:$versions.view.appcompat"
+    implementation "androidx.fragment:fragment-ktx:$versions.view.ktx_fragment"
+    implementation "androidx.constraintlayout:constraintlayout:$versions.view.constraint"
+
+    // view
+    implementation "com.google.android.material:material:$versions.view.material"
+
+    // DI
+    implementation "com.google.dagger:dagger:$versions.di.dagger"
+    implementation "com.google.dagger:dagger-android-support:$versions.di.dagger"
+    kapt "com.google.dagger:dagger-compiler:$versions.di.dagger"
+    kapt "com.google.dagger:dagger-android-processor:$versions.di.dagger"
+
+    // lifecycle
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$versions.lifecycle"
+    implementation "androidx.lifecycle:lifecycle-extensions:$versions.lifecycle"
+    kapt "androidx.lifecycle:lifecycle-common-java8:$versions.lifecycle"
+
+    // RxJava
+    implementation "io.reactivex.rxjava2:rxandroid:$versions.rx.android"
+    implementation "io.reactivex.rxjava2:rxandroid:$versions.rx.android"
+    implementation "io.reactivex.rxjava2:rxjava:$versions.rx.java"
+    implementation "io.reactivex.rxjava2:rxkotlin:$versions.rx.kotlin"
+    implementation "com.vanniktech:rxpermission:$versions.rx.permissions"
+
+    // networking
+    implementation "com.squareup.okhttp3:okhttp:$versions.networking.okhttp"
+    implementation "com.squareup.okhttp3:logging-interceptor:$versions.networking.okhttp"
+    implementation "com.squareup.retrofit2:retrofit:$versions.networking.retrofit"
+    implementation "com.squareup.retrofit2:converter-gson:$versions.networking.retrofit"
+    implementation "com.jakewharton.retrofit:retrofit2-rxjava2-adapter:$versions.networking.adapter"
+}
