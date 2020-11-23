@@ -3,6 +3,9 @@ package com.senyk.volodymyr.tiktoklike.data.repository
 import android.content.Context
 import android.webkit.WebView
 import com.senyk.volodymyr.tiktoklike.data.datasource.*
+import com.senyk.volodymyr.tiktoklike.data.datasource.model.response.UserInfoResponse
+import com.senyk.volodymyr.tiktoklike.data.datasource.model.response.VideosResponse
+import com.senyk.volodymyr.tiktoklike.domain.CookieRepository
 import com.senyk.volodymyr.tiktoklike.domain.TikTokRepository
 import io.reactivex.Completable
 import io.reactivex.Single
@@ -12,6 +15,7 @@ import javax.inject.Inject
 
 class TikTokNetworkRepository @Inject constructor(
     private val tikTokApi: TikTokApi,
+    private val cookieRepository: CookieRepository,
     context: Context
 ) : TikTokRepository {
 
@@ -22,165 +26,199 @@ class TikTokNetworkRepository @Inject constructor(
             javaScriptEnabled = true
             userAgentString = HEADER_DEFAULT_USER_AGENT
         }
-        // load empty url for correct signUrl method invocation
-        // without this string webView.evaluateJavascript will return incorrect code
         webView.loadUrl("")
     }
 
-    // setLike method that uses universal POST request, so returns Completable
-    /*override fun setLike(
-        cookie: String,
+    override fun likeVideo(
         videoId: String,
         userId: String,
         like: Boolean
-    ): Completable {
-        val query = ENDPOINT_SET_LIKE
-        val queryOptions = mutableMapOf(
-            PARAM_APP_ID to PARAM_DEFAULT_APP_ID,
-            PARAM_LANGUAGE to PARAM_DEFAULT_LANGUAGE,
-            PARAM_LANG to PARAM_DEFAULT_LANGUAGE,
-            PARAM_AID to PARAM_DEFAULT_AID,
-            PARAM_VIDEO_ID to videoId,
-            PARAM_USER_ID to userId,
-            PARAM_DID to getDataFromCookie(cookie = cookie, key = COOKIE_KEY_DEVICE_ID),
-            PARAM_DEVICE_ID to getDataFromCookie(cookie = cookie, key = COOKIE_KEY_DEVICE_ID),
-            PARAM_DEVICE_FINGERPRINT to PARAM_DEFAULT_DEVICE_FINGERPRINT,
-            PARAM_COOKIE_ENABLED to PARAM_DEFAULT_COOKIE_STATUS,
-            PARAM_TYPE to (if (like) 1 else 0).toString()
-        )
-        return signUrl(url = getFormattedUrl(endpoint = query, options = queryOptions))
-            .observeOn(Schedulers.computation())
-            .flatMapCompletable { urlSigningCode ->
-                tikTokApi.queryPostGetCompletable(
-                    cookie = cookie,
-                    token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
-                    url = getFormattedUrl(
-                        endpoint = query,
-                        options = queryOptions.apply { put(PARAM_SIGNATURE, urlSigningCode) },
-                        fullUrl = false
+    ): Completable = cookieRepository.getCookie()
+        .flatMapCompletable { cookie ->
+            val query = ENDPOINT_SET_LIKE
+            val queryOptions = mutableMapOf(
+                PARAM_APP_ID to PARAM_DEFAULT_APP_ID,
+                PARAM_LANGUAGE to PARAM_DEFAULT_LANGUAGE,
+                PARAM_LANG to PARAM_DEFAULT_LANGUAGE,
+                PARAM_AID to PARAM_DEFAULT_AID,
+                PARAM_VIDEO_ID to videoId,
+                PARAM_USER_ID to userId,
+                PARAM_DID to getDataFromCookie(cookie = cookie, key = COOKIE_KEY_DEVICE_ID),
+                PARAM_DEVICE_ID to getDataFromCookie(cookie = cookie, key = COOKIE_KEY_DEVICE_ID),
+                PARAM_DEVICE_FINGERPRINT to PARAM_DEFAULT_DEVICE_FINGERPRINT,
+                PARAM_COOKIE_ENABLED_UNDERSCORED to PARAM_DEFAULT_COOKIE_STATUS,
+                PARAM_TYPE to like.toInt().toString()
+            )
+            signUrl(url = getFormattedUrl(endpoint = query, options = queryOptions))
+                .observeOn(Schedulers.computation())
+                .flatMap { urlSigningCode ->
+                    tikTokApi.setLike(
+                        cookie = cookie,
+                        token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
+                        url = getFormattedUrl(
+                            endpoint = query,
+                            options = queryOptions.toMutableMap().apply {
+                                put(PARAM_SIGNATURE, urlSigningCode)
+                            },
+                            fullUrl = false
+                        )
                     )
-                )
-            }.observeOn(AndroidSchedulers.mainThread())
-    }*/
-
-    override fun setLike(
-        cookie: String,
-        videoId: String,
-        userId: String,
-        like: Boolean
-    ): Completable {
-        // get API call url
-        val query = ENDPOINT_SET_LIKE
-        // build API call parameters map
-        val queryOptions = mutableMapOf(
-            PARAM_APP_ID to PARAM_DEFAULT_APP_ID,
-            PARAM_LANGUAGE to PARAM_DEFAULT_LANGUAGE,
-            PARAM_LANG to PARAM_DEFAULT_LANGUAGE,
-            PARAM_AID to PARAM_DEFAULT_AID,
-            PARAM_VIDEO_ID to videoId,
-            PARAM_USER_ID to userId,
-            PARAM_DID to getDataFromCookie(cookie = cookie, key = COOKIE_KEY_DEVICE_ID),
-            PARAM_DEVICE_ID to getDataFromCookie(cookie = cookie, key = COOKIE_KEY_DEVICE_ID),
-            PARAM_DEVICE_FINGERPRINT to PARAM_DEFAULT_DEVICE_FINGERPRINT,
-            PARAM_COOKIE_ENABLED to PARAM_DEFAULT_COOKIE_STATUS,
-            PARAM_TYPE to like.toInt().toString()
-        )
-        return signUrl(url = getFormattedUrl(endpoint = query, options = queryOptions))
-            .observeOn(Schedulers.computation())
-            .flatMap { urlSigningCode ->
-                tikTokApi.setLike(
-                    cookie = cookie,
-                    csrfToken = getDataFromCookie(
-                        cookie = cookie,
-                        key = COOKIE_KEY_CSRF_TOKEN
-                    ),
-                    appId = queryOptions[PARAM_APP_ID] ?: PARAM_DEFAULT_APP_ID,
-                    language = queryOptions[PARAM_LANGUAGE] ?: PARAM_DEFAULT_LANGUAGE,
-                    lang = queryOptions[PARAM_LANG] ?: PARAM_DEFAULT_LANGUAGE,
-                    aid = queryOptions[PARAM_AID] ?: PARAM_DEFAULT_AID,
-                    videoId = queryOptions[PARAM_VIDEO_ID] ?: videoId,
-                    userId = queryOptions[PARAM_USER_ID] ?: userId,
-                    did = queryOptions[PARAM_DID] ?: getDataFromCookie(
-                        cookie = cookie,
-                        key = COOKIE_KEY_DEVICE_ID
-                    ),
-                    deviceId = queryOptions[PARAM_DEVICE_ID] ?: getDataFromCookie(
-                        cookie = cookie,
-                        key = COOKIE_KEY_DEVICE_ID
-                    ),
-                    verifyFp = queryOptions[PARAM_DEVICE_FINGERPRINT]
-                        ?: PARAM_DEFAULT_DEVICE_FINGERPRINT,
-                    cookieEnabled = queryOptions[PARAM_COOKIE_ENABLED]
-                        ?: PARAM_DEFAULT_COOKIE_STATUS,
-                    type = queryOptions[PARAM_TYPE] ?: like.toInt().toString(),
-                    signature = urlSigningCode
-                )
-            }
-            .flatMapCompletable { response ->
-                // API returns isDigg = 0 if video is liked and isDigg = 1 if video is without like
-                if (response.isDigg.toBoolean() != like) {
-                    Completable.complete()
-                } else {
-                    Completable.error(Exception("Operation not successful"))
                 }
-            }.observeOn(AndroidSchedulers.mainThread())
-    }
+                .flatMapCompletable { response ->
+                    if (response.isDigg.toBoolean() != like) {
+                        Completable.complete()
+                    } else {
+                        Completable.error(Exception("Operation not successful"))
+                    }
+                }.observeOn(AndroidSchedulers.mainThread())
+        }
 
-    override fun getUserDetails(cookie: String, userId: String): Completable {
-        val query = ENDPOINT_USER_DETAILS
-        val queryOptions = mutableMapOf(
-            PARAM_APP_ID to PARAM_DEFAULT_APP_ID,
-            PARAM_LANGUAGE to PARAM_DEFAULT_LANGUAGE,
-            PARAM_LANG to PARAM_DEFAULT_LANGUAGE,
-            PARAM_UNIQUE_ID to userId
-        )
-        return signUrl(url = getFormattedUrl(endpoint = query, options = queryOptions))
-            .observeOn(Schedulers.computation())
-            .flatMapCompletable { urlSigningCode ->
-                tikTokApi.getQueryCompletable(
-                    cookie = cookie,
-                    token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
-                    url = getFormattedUrl(
-                        endpoint = query,
-                        options = queryOptions.apply { put(PARAM_SIGNATURE, urlSigningCode) },
-                        fullUrl = false
-                    )
+    override fun getUserDetails(userId: String): Single<UserInfoResponse> =
+        cookieRepository.getCookie()
+            .flatMap { cookie ->
+                val query = ENDPOINT_USER_DETAILS
+                val queryOptions = mutableMapOf(
+                    PARAM_APP_ID to PARAM_DEFAULT_APP_ID,
+                    PARAM_LANGUAGE to PARAM_DEFAULT_LANGUAGE,
+                    PARAM_LANG to PARAM_DEFAULT_LANGUAGE,
+                    PARAM_UNIQUE_ID to userId
                 )
-            }.observeOn(AndroidSchedulers.mainThread())
-    }
+                signUrl(url = getFormattedUrl(endpoint = query, options = queryOptions))
+                    .observeOn(Schedulers.computation())
+                    .flatMap { urlSigningCode ->
+                        tikTokApi.getUser(
+                            cookie = cookie,
+                            token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
+                            url = getFormattedUrl(
+                                endpoint = query,
+                                options = queryOptions.apply {
+                                    put(
+                                        PARAM_SIGNATURE,
+                                        urlSigningCode
+                                    )
+                                },
+                                fullUrl = false
+                            )
+                        )
+                    }
+                    .observeOn(AndroidSchedulers.mainThread())
+            }
 
-    override fun getTrendingStream(cookie: String, userId: String): Completable {
-        val query = ENDPOINT_VIDEOS
-        val queryOptions = mutableMapOf(
-            PARAM_APP_ID to PARAM_DEFAULT_APP_ID,
-            PARAM_LANGUAGE to PARAM_DEFAULT_LANGUAGE,
-            PARAM_LANG to PARAM_DEFAULT_LANGUAGE,
-            PARAM_ID to PARAM_DEFAULT_ID,
-            PARAM_USER_ID to userId,
-            PARAM_DID to getDataFromCookie(cookie = cookie, key = COOKIE_KEY_DEVICE_ID),
-            PARAM_COOKIE_ENABLED_2 to PARAM_DEFAULT_COOKIE_STATUS,
-            PARAM_DEVICE_FINGERPRINT to PARAM_DEFAULT_DEVICE_FINGERPRINT,
-            PARAM_SEC_UID to PARAM_DEFAULT_SEC_UID,
-            PARAM_SOURCE_TYPE to 12.toString(),
-            PARAM_TYPE to 5.toString(),
-            PARAM_COUNT to 30.toString(),
-            PARAM_MAX_CURSOR to PARAM_DEFAULT_MIN_CURSOR,
-            PARAM_MIN_CURSOR to PARAM_DEFAULT_MIN_CURSOR
-        )
-        return signUrl(url = getFormattedUrl(endpoint = query, options = queryOptions))
-            .observeOn(Schedulers.computation())
-            .flatMapCompletable { urlSigningCode ->
-                tikTokApi.getQueryCompletable(
-                    cookie = cookie,
-                    token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
-                    url = getFormattedUrl(
-                        endpoint = query,
-                        options = queryOptions.apply { put(PARAM_SIGNATURE, urlSigningCode) },
-                        fullUrl = false
-                    )
+    override fun getTrendingStream(userId: String): Single<VideosResponse> =
+        cookieRepository.getCookie()
+            .flatMap { cookie ->
+                val query = ENDPOINT_TRENDING_VIDEOS
+                val queryOptions = mutableMapOf(
+                    PARAM_APP_ID to PARAM_DEFAULT_APP_ID,
+                    PARAM_LANGUAGE to PARAM_DEFAULT_LANGUAGE,
+                    PARAM_LANG to PARAM_DEFAULT_LANGUAGE,
+                    PARAM_ID to PARAM_DEFAULT_ID,
+                    PARAM_USER_ID to userId,
+                    PARAM_DID to getDataFromCookie(cookie = cookie, key = COOKIE_KEY_DEVICE_ID),
+                    PARAM_COOKIE_ENABLED to PARAM_DEFAULT_COOKIE_STATUS,
+                    PARAM_DEVICE_FINGERPRINT to PARAM_DEFAULT_DEVICE_FINGERPRINT,
+                    PARAM_SEC_UID to PARAM_DEFAULT_SEC_UID,
+                    PARAM_SOURCE_TYPE to 12.toString(),
+                    PARAM_TYPE to 5.toString(),
+                    PARAM_COUNT to 30.toString(),
+                    PARAM_MAX_CURSOR to PARAM_DEFAULT_MIN_CURSOR,
+                    PARAM_MIN_CURSOR to PARAM_DEFAULT_MIN_CURSOR
                 )
-            }.observeOn(AndroidSchedulers.mainThread())
-    }
+                signUrl(url = getFormattedUrl(endpoint = query, options = queryOptions))
+                    .observeOn(Schedulers.computation())
+                    .flatMap { urlSigningCode ->
+                        tikTokApi.getVideos(
+                            cookie = cookie,
+                            token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
+                            url = getFormattedUrl(
+                                endpoint = query,
+                                options = queryOptions.apply {
+                                    put(
+                                        PARAM_SIGNATURE,
+                                        urlSigningCode
+                                    )
+                                },
+                                fullUrl = false
+                            )
+                        )
+                    }
+                    .observeOn(AndroidSchedulers.mainThread())
+            }
+
+    override fun getUserVideos(
+        userId: String,
+        userSecUid: String
+    ): Single<VideosResponse> = cookieRepository.getCookie()
+        .flatMap { cookie ->
+            val query = ENDPOINT_USER_VIDEOS
+            val queryOptions = mutableMapOf(
+                PARAM_APP_ID to PARAM_DEFAULT_APP_ID,
+                PARAM_LANGUAGE to PARAM_DEFAULT_LANGUAGE,
+                PARAM_LANG to PARAM_DEFAULT_LANGUAGE,
+                PARAM_AID to PARAM_DEFAULT_AID,
+                PARAM_ID to userId,
+                PARAM_SEC_UID to userSecUid,
+                PARAM_COUNT to 30.toString(),
+                PARAM_MAX_CURSOR to PARAM_DEFAULT_MIN_CURSOR,
+                PARAM_MIN_CURSOR to PARAM_DEFAULT_MIN_CURSOR,
+                PARAM_SOURCE_TYPE to 8.toString(),
+                PARAM_TYPE to 1.toString(),
+            )
+            signUrl(url = getFormattedUrl(endpoint = query, options = queryOptions))
+                .observeOn(Schedulers.computation())
+                .flatMap { urlSigningCode ->
+                    tikTokApi.getVideos(
+                        cookie = cookie,
+                        token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
+                        url = getFormattedUrl(
+                            endpoint = query,
+                            options = queryOptions.apply {
+                                put(
+                                    PARAM_SIGNATURE,
+                                    urlSigningCode
+                                )
+                            },
+                            fullUrl = false
+                        )
+                    )
+                }
+                .observeOn(AndroidSchedulers.mainThread())
+        }
+
+    override fun followUser(
+        userId: String,
+        userToFollowId: String,
+        follow: Boolean
+    ): Completable = cookieRepository.getCookie()
+        .flatMapCompletable { cookie ->
+            val query = ENDPOINT_FOLLOW_USER
+            val queryOptions = mutableMapOf(
+                PARAM_APP_ID to PARAM_DEFAULT_APP_ID,
+                PARAM_LANGUAGE to PARAM_DEFAULT_LANGUAGE,
+                PARAM_LANG to PARAM_DEFAULT_LANGUAGE,
+                PARAM_AID to PARAM_DEFAULT_AID,
+                PARAM_USER_ID to userId,
+                PARAM_USER_ID_UNDERSCORED to userToFollowId,
+                PARAM_DID to getDataFromCookie(cookie = cookie, key = COOKIE_KEY_DEVICE_ID),
+                PARAM_DEVICE_ID to getDataFromCookie(cookie = cookie, key = COOKIE_KEY_DEVICE_ID),
+                PARAM_DEVICE_FINGERPRINT to PARAM_DEFAULT_DEVICE_FINGERPRINT,
+                PARAM_COOKIE_ENABLED_UNDERSCORED to PARAM_DEFAULT_COOKIE_STATUS,
+                PARAM_TYPE to follow.toInt().toString()
+            )
+            signUrl(url = getFormattedUrl(endpoint = query, options = queryOptions))
+                .observeOn(Schedulers.computation())
+                .flatMapCompletable { urlSigningCode ->
+                    tikTokApi.postQueryCompletable(
+                        cookie = cookie,
+                        token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
+                        url = getFormattedUrl(
+                            endpoint = query,
+                            options = queryOptions.apply { put(PARAM_SIGNATURE, urlSigningCode) },
+                            fullUrl = false
+                        )
+                    )
+                }.observeOn(AndroidSchedulers.mainThread())
+        }
 
     // gets _signature parameter, that needs almost all requests
     // requires full url of API call, performs calculations via obfuscated JS code

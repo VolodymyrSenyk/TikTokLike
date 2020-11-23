@@ -3,9 +3,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
-        android:id="@+id/menuActionNext"
-        android:icon="@android:drawable/btn_star_big_on"
-        android:title="Next"
+        android:id="@+id/menuActionCookieGot"
+        android:icon="@android:drawable/ic_menu_save"
+        android:title="Cookie got"
         app:showAsAction="always" />
+
+    <item
+        android:id="@+id/menuActionTestRequest"
+        android:icon="@android:drawable/ic_menu_send"
+        android:title="Test request"
+        app:showAsAction="ifRoom" />
 
 </menu>

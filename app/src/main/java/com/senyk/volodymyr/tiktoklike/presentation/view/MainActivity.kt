@@ -42,14 +42,15 @@ class MainActivity : BaseActivity() {
         return true
     }
 
-    override fun onOptionsItemSelected(menuItem: MenuItem): Boolean =
-        when (menuItem.itemId) {
-            R.id.menuActionNext -> {
-                viewModel.onCookieGotClick(CookieManager.getInstance().getCookie(BASE_URL))
-                true
-            }
-            else -> super.onOptionsItemSelected(menuItem)
+    override fun onOptionsItemSelected(menuItem: MenuItem): Boolean = when (menuItem.itemId) {
+        R.id.menuActionCookieGot -> {
+            viewModel.onCookieGotClick(CookieManager.getInstance().getCookie(BASE_URL)); true
         }
+        R.id.menuActionTestRequest -> {
+            viewModel.onTestClick(); true
+        }
+        else -> super.onOptionsItemSelected(menuItem)
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun setUpWebViewDefaults(webView: WebView) {
