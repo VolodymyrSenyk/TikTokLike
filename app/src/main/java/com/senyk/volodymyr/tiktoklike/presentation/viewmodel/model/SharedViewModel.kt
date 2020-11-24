@@ -1,9 +1,11 @@
 package com.senyk.volodymyr.tiktoklike.presentation.viewmodel.model
 
 import android.util.Log
+import com.senyk.volodymyr.tiktoklike.data.datasource.model.inner.Items
 import com.senyk.volodymyr.tiktoklike.domain.CookieRepository
 import com.senyk.volodymyr.tiktoklike.domain.TikTokRepository
 import com.senyk.volodymyr.tiktoklike.presentation.viewmodel.base.BaseRxViewModel
+import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.rxkotlin.subscribeBy
 import io.reactivex.schedulers.Schedulers
@@ -23,7 +25,7 @@ class SharedViewModel @Inject constructor(
     }
 
     fun onTestClick() {
-        onChainTestClick()
+        onFollowUserClick()
     }
 
     fun onChainTestClick() {
@@ -83,65 +85,100 @@ class SharedViewModel @Inject constructor(
     }
 
     fun onGetUserDetailsClick() {
-        tikTokRepository.getUserDetails(userId = TEST_USER_LOGIN)
+        tikTokRepository.getUserDetails(userId = TEST_CURRENT_USER_LOGIN)
             .subscribeBy(this::onError) { onComplete("GetUserDetails completed") }
             .apply(this::addDisposable)
     }
 
     fun onGetVideosClick() {
-        tikTokRepository.getTrendingStream(userId = TEST_USER_ID)
+        tikTokRepository.getUserDetails(userId = TEST_CURRENT_USER_LOGIN)
+            .flatMap { user ->
+                tikTokRepository.getTrendingStream(userId = user.userInfo?.user?.id ?: "")
+            }
             .subscribeBy(this::onError) { onComplete("GetVideos completed") }
             .apply(this::addDisposable)
     }
 
     fun onGetUserVideosClick() {
-        tikTokRepository.getUserVideos(
-            userId = TEST_USER_TO_FOLLOW_ID,
-            userSecUid = TEST_USER_TO_FOLLOW_SEC_UID
-        )
-            .subscribeBy(this::onError) { onComplete("FollowUser completed") }
+        tikTokRepository.getUserDetails(userId = TEST_TARGET_USER_LOGIN)
+            .flatMap { user ->
+                tikTokRepository.getUserVideos(
+                    userId = user.userInfo?.user?.id ?: "",
+                    userSecUid = user.userInfo?.user?.secUid ?: ""
+                )
+            }
+            .subscribeBy(this::onError) { onComplete("GetUserVideos completed") }
             .apply(this::addDisposable)
     }
 
     fun onSetLikeClick() {
-        tikTokRepository.likeVideo(
-            userId = TEST_USER_ID,
-            videoId = TEST_VIDEO_TO_LIKE_ID,
-            like = true
-        )
+        tikTokRepository.getUserDetails(userId = TEST_CURRENT_USER_LOGIN)
+            .flatMapCompletable { user ->
+                tikTokRepository.likeVideo(
+                    userId = user.userInfo?.user?.id ?: "",
+                    videoId = "6893087314021485825",
+                    like = true
+                )
+            }
             .subscribeBy(this::onError) { onComplete("SetLike completed") }
             .apply(this::addDisposable)
     }
 
-    fun onRemoveLikeClick() {
-        tikTokRepository.likeVideo(
-            videoId = TEST_VIDEO_TO_LIKE_ID,
-            userId = TEST_USER_ID,
-            like = false
-        )
-            .subscribeBy(this::onError) { onComplete("RemoveLike completed") }
-            .apply(this::addDisposable)
-    }
-
     fun onFollowUserClick() {
-        tikTokRepository.followUser(
-            userId = TEST_USER_ID,
-            userToFollowId = TEST_USER_TO_FOLLOW_ID,
-            follow = true
-        )
+        tikTokRepository.getUserDetails(userId = TEST_CURRENT_USER_LOGIN)
+            .zipWith(tikTokRepository.getUserDetails(userId = TEST_TARGET_USER_LOGIN)) { currentUser, targetUser ->
+                mapOf(
+                    CURRENT_USER_KEY to currentUser.userInfo,
+                    TARGET_USER_KEY to targetUser.userInfo
+                )
+            }
+            .flatMapCompletable { usersList ->
+                tikTokRepository.followUser(
+                    userId = usersList[CURRENT_USER_KEY]?.user?.id ?: "",
+                    userToFollowId = usersList[TARGET_USER_KEY]?.user?.id ?: "",
+                    follow = true
+                )
+            }
             .subscribeBy(this::onError) { onComplete("FollowUser completed") }
             .apply(this::addDisposable)
     }
 
+    fun onFollowAllUsersFromTrendClick() {
+        var currentUserId = ""
+        tikTokRepository.getUserDetails(userId = TEST_CURRENT_USER_LOGIN)
+            .flatMap { user ->
+                currentUserId = user.userInfo?.user?.id ?: ""
+                tikTokRepository.getTrendingStream(userId = currentUserId)
+            }
+            .flatMapObservable { videos ->
+                Observable.create<Items> { emitter ->
+                    videos.items?.forEach { video ->
+                        video?.let { emitter.onNext(video) }
+                    }
+                    emitter.onComplete()
+                }
+            }
+            .flatMapSingle { video ->
+                tikTokRepository.getUserDetails(
+                    userId = video.author?.uniqueId ?: ""
+                )
+            }
+            .flatMapCompletable { user ->
+                tikTokRepository.followUser(
+                    userId = currentUserId,
+                    userToFollowId = user.userInfo?.user?.id ?: "",
+                    follow = true
+                )
+            }
+            .subscribeBy(this::onError) { onComplete("FollowAllUsers completed") }
+            .apply(this::addDisposable)
+    }
+
     companion object {
-        private const val TEST_USER_LOGIN = "volodymyrsenyk0"
-        private const val TEST_USER_ID = "6892969089498612741"
+        private const val TEST_CURRENT_USER_LOGIN = "volodymyrsenyk0"
+        private const val TEST_TARGET_USER_LOGIN = "markiv_anastasia"
 
-        private const val TEST_VIDEO_TO_LIKE_ID = "6893087314021485825"
-
-        private const val TEST_USER_TO_FOLLOW_LOGIN = "markiv_anastasia"
-        private const val TEST_USER_TO_FOLLOW_ID = "6661611121231036421"
-        private const val TEST_USER_TO_FOLLOW_SEC_UID =
-            "MS4wLjABAAAA1veG3rs2dMlkbW__TSFdq_cpaxVmACXaYKuOeKj4MB8qIPcivHD5Ha5_p03TgBU2"
+        private const val CURRENT_USER_KEY = "current"
+        private const val TARGET_USER_KEY = "target"
     }
 }
