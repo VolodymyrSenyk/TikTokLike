@@ -185,41 +185,6 @@ class TikTokNetworkRepository @Inject constructor(
                 .observeOn(AndroidSchedulers.mainThread())
         }
 
-    override fun followUser(
-        userId: String,
-        userToFollowId: String,
-        follow: Boolean
-    ): Completable = cookieRepository.getCookie()
-        .flatMapCompletable { cookie ->
-            val query = ENDPOINT_FOLLOW_USER
-            val queryOptions = mutableMapOf(
-                PARAM_APP_ID to PARAM_DEFAULT_APP_ID,
-                PARAM_LANGUAGE to PARAM_DEFAULT_LANGUAGE,
-                PARAM_LANG to PARAM_DEFAULT_LANGUAGE,
-                PARAM_AID to PARAM_DEFAULT_AID,
-                PARAM_USER_ID to userId,
-                PARAM_USER_ID_UNDERSCORED to userToFollowId,
-                PARAM_DID to getDataFromCookie(cookie = cookie, key = COOKIE_KEY_DEVICE_ID),
-                PARAM_DEVICE_ID to getDataFromCookie(cookie = cookie, key = COOKIE_KEY_DEVICE_ID),
-                PARAM_DEVICE_FINGERPRINT to PARAM_DEFAULT_DEVICE_FINGERPRINT,
-                PARAM_COOKIE_ENABLED_UNDERSCORED to PARAM_DEFAULT_COOKIE_STATUS,
-                PARAM_TYPE to follow.toInt().toString()
-            )
-            signUrl(url = getFormattedUrl(endpoint = query, options = queryOptions))
-                .observeOn(Schedulers.computation())
-                .flatMapCompletable { urlSigningCode ->
-                    tikTokApi.postQueryCompletable(
-                        cookie = cookie,
-                        token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
-                        url = getFormattedUrl(
-                            endpoint = query,
-                            options = queryOptions.apply { put(PARAM_SIGNATURE, urlSigningCode) },
-                            fullUrl = false
-                        )
-                    )
-                }.observeOn(AndroidSchedulers.mainThread())
-        }
-
     // gets _signature parameter, that needs almost all requests
     // requires full url of API call, performs calculations via obfuscated JS code
     private fun signUrl(url: String): Single<String> =
@@ -268,4 +233,69 @@ class TikTokNetworkRepository @Inject constructor(
     private fun Boolean.toInt(): Int = if (this) 1 else 0
 
     private fun Int.toBoolean(): Boolean = this != 0
+
+    override fun followUser(
+        userId: String,
+        userToFollowId: String,
+        follow: Boolean
+    ): Completable = cookieRepository.getCookie()
+        .flatMapCompletable { cookie ->
+            val query = ENDPOINT_FOLLOW_USER
+            val queryOptions = mutableMapOf(
+                "aid" to 1988.toString(),
+                "app_name" to "tiktok_web",
+                "device_platform" to "web_pc",
+                "referer" to "",
+                "root_referer" to "https:%2F%2Fwww.google.com%2F",
+                "user_agent" to "Mozilla%2F5.0+(Macintosh%3B+Intel+Mac+OS+X+10_15_7)+AppleWebKit%2F537.36+(KHTML,+like+Gecko)+Chrome%2F86.0.4240.198+Safari%2F537.36",
+                "cookie_enabled" to true.toString(),
+                "screen_width" to 1920.toString(),
+                "screen_height" to 1080.toString(),
+                "browser_language" to "ru-RU",
+                "browser_platform" to "MacIntel",
+                "browser_name" to "Mozilla",
+                "browser_version" to "5.0+(Macintosh%3B+Intel+Mac+OS+X+10_15_7)+AppleWebKit%2F537.36+(KHTML,+like+Gecko)+Chrome%2F86.0.4240.198+Safari%2F537.36",
+                "browser_online" to true.toString(),
+                "ac" to "4g",
+                "timezone_name" to "Europe%2FKiev",
+                "page_referer" to "https:%2F%2Fwww.tiktok.com%2F",
+                "priority_region" to "",
+                "verifyFp" to "verify_khlv3g19_MFc8LiTO_QXfi_48KB_9g1G_5f8bq9kBPx5m",
+                "appId" to 1233.toString(),
+                "region" to "UA",
+                "appType" to "m",
+                "isAndroid" to false.toString(),
+                "isMobile" to false.toString(),
+                "isIOS" to false.toString(),
+                "OS" to "mac",
+                "did" to "6896044981934900742",
+                "device_id" to "6896044981934900742",
+                "type" to 1.toString(),
+                "user_id" to "6889113253596152834",
+                "from" to 19.toString(),
+                "channel_id" to 3.toString(),
+                "from_pre" to 0.toString(),
+                "app_language" to "ru",
+                "current_region" to "UA",
+                "fromWeb" to 1.toString(),
+            )
+            signUrl(url = getFormattedUrl(endpoint = query, options = queryOptions))
+                .observeOn(Schedulers.computation())
+                .map { urlSigningCode ->
+                    getFormattedUrl(
+                        endpoint = query,
+                        options = queryOptions.apply {
+                            put(PARAM_SIGNATURE, "_02B4Z6wo00901e2PLDQAAICCbGHgTgEp7G3tjiiAACSt6d")
+                        },
+                        fullUrl = false
+                    )
+                }
+                .flatMapCompletable { url ->
+                    tikTokApi.followUserPost(
+                        //   cookie = cookie,
+                        //   token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
+                        url = url
+                    )
+                }.observeOn(AndroidSchedulers.mainThread())
+        }
 }

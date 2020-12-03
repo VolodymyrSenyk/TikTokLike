@@ -25,7 +25,7 @@ class SharedViewModel @Inject constructor(
     }
 
     fun onTestClick() {
-        onFollowUserClick()
+        onFollowUserSimple()
     }
 
     fun onChainTestClick() {
@@ -139,6 +139,16 @@ class SharedViewModel @Inject constructor(
                     follow = true
                 )
             }
+            .subscribeBy(this::onError) { onComplete("FollowUser completed") }
+            .apply(this::addDisposable)
+    }
+
+    fun onFollowUserSimple() {
+        tikTokRepository.followUser(
+            userId = "6892969089498612741",
+            userToFollowId = "6661611121231036421",
+            follow = true
+        )
             .subscribeBy(this::onError) { onComplete("FollowUser completed") }
             .apply(this::addDisposable)
     }
