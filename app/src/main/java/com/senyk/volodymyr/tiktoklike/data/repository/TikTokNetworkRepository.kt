@@ -1,7 +1,10 @@
 package com.senyk.volodymyr.tiktoklike.data.repository
 
 import android.content.Context
+import android.util.Log
+import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import com.senyk.volodymyr.tiktoklike.data.datasource.*
 import com.senyk.volodymyr.tiktoklike.data.datasource.model.response.UserInfoResponse
 import com.senyk.volodymyr.tiktoklike.data.datasource.model.response.VideosResponse
@@ -21,12 +24,49 @@ class TikTokNetworkRepository @Inject constructor(
 
     private val webView: WebView = WebView(context)
 
+    private val webViewParser: WebView = WebView(context)
+
     init {
         webView.settings.apply {
             javaScriptEnabled = true
             userAgentString = HEADER_DEFAULT_USER_AGENT
         }
         webView.loadUrl("")
+
+        webViewParser.settings.apply {
+            javaScriptEnabled = true
+            userAgentString = HEADER_DEFAULT_USER_AGENT
+        }
+        webViewParser.addJavascriptInterface(MyJavaScriptInterface(context), "HtmlViewer")
+        webViewParser.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView, url: String) {
+
+                /*if (url == "https://www.tiktok.com/@markiv_anastasia?source=h5_m") {
+                    webView.loadUrl(
+                        "javascript:(function(){" +
+                                "button=document.getElementsByTagName('button')[0];" +
+                                "console.log('Button 1 is ' + button);" +
+                                "})()"
+                    )
+                    webView.loadUrl(
+                        "javascript:(function(){" +
+                                "button=document.getElementsByClassName('follow-button')[0];" +
+                                "console.log('Button is ' + button);" +
+                                "event=document.createEvent('HTMLEvents');" +
+                                "event.initEvent('click',true,true);" +
+                                "button.dispatchEvent(event);" +
+                                "})()"
+                    )
+                } else {
+                    Log.e("OkHttp", url)
+                }*/
+
+                webViewParser.loadUrl(
+                    "javascript:window.HtmlViewer.showHTML" +
+                            "('<html>'+document.getElementsByTagName('html')[0].innerHTML+'</html>');"
+                )
+            }
+        }
     }
 
     override fun likeVideo(
@@ -238,7 +278,11 @@ class TikTokNetworkRepository @Inject constructor(
         userId: String,
         userToFollowId: String,
         follow: Boolean
-    ): Completable = cookieRepository.getCookie()
+    ): Completable {
+        webViewParser.loadUrl("https://www.tiktok.com/@markiv_anastasia?source=h5_m")
+
+        return Completable.complete()
+    } /*cookieRepository.getCookie()
         .flatMapCompletable { cookie ->
             val query = ENDPOINT_FOLLOW_USER
             val queryOptions = mutableMapOf(
@@ -297,5 +341,43 @@ class TikTokNetworkRepository @Inject constructor(
                         url = url
                     )
                 }.observeOn(AndroidSchedulers.mainThread())
+        }*/
+
+    inner class MyJavaScriptInterface(private val context: Context) {
+        @JavascriptInterface
+        fun showHTML(html: String?) {
+            if (html == null) return
+            val maxLogSize = 1000
+            for (i in 0..html.length / maxLogSize) {
+                val start = i * maxLogSize
+                var end = (i + 1) * maxLogSize
+                end = if (end > html.length) html.length else end
+                val log = html.substring(start, end)
+                if (log.contains("follow-button jsx-3251180706 jsx-683523640 share-follow tiktok-btn-pc tiktok-btn-pc-medium")) {
+                    this@TikTokNetworkRepository.webViewParser.evaluateJavascript(
+                        "javascript:(function(){" +
+                                "button=document.getElementsByClassName('follow-button')[0];" +
+                                "console.log('Button is ' + button);" +
+                                "event=document.createEvent('HTMLEvents');" +
+                                "event.initEvent('click',true,true);" +
+                                "button.dispatchEvent(event);" +
+                                "})()"
+                    ) {
+                        Log.e("OkHttp", it)
+                    }
+                }
+            }
         }
+        /* @JavascriptInterface
+         fun showHTML(html: String?) {
+             if (html == null) return
+             val maxLogSize = 1000
+             for (i in 0..html.length / maxLogSize) {
+                 val start = i * maxLogSize
+                 var end = (i + 1) * maxLogSize
+                 end = if (end > html.length) html.length else end
+                 Log.v("OkHttp", html.substring(start, end))
+             }
+         }*/
+    }
 }
