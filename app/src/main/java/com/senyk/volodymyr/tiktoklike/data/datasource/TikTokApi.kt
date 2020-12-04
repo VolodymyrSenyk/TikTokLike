@@ -2,10 +2,14 @@ package com.senyk.volodymyr.tiktoklike.data.datasource
 
 import com.senyk.volodymyr.tiktoklike.data.datasource.model.response.SetLikeResponse
 import com.senyk.volodymyr.tiktoklike.data.datasource.model.response.UserInfoResponse
+import com.senyk.volodymyr.tiktoklike.data.datasource.model.response.VideoDetailsResponse
 import com.senyk.volodymyr.tiktoklike.data.datasource.model.response.VideosResponse
 import io.reactivex.Completable
 import io.reactivex.Single
-import retrofit2.http.*
+import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.POST
+import retrofit2.http.Url
 
 interface TikTokApi {
 
@@ -43,6 +47,13 @@ interface TikTokApi {
         @Header(HEADER_CSRF_TOKEN) token: String,
         @Url url: String
     ): Single<VideosResponse>
+
+    @GET
+    fun getVideoDetails(
+        @Header(HEADER_COOKIE) cookie: String,
+        @Header(HEADER_CSRF_TOKEN) token: String,
+        @Url url: String
+    ): Single<VideoDetailsResponse>
 
     @POST
     fun followUserPost(

@@ -41,12 +41,12 @@ class NetworkModule {
     @Singleton
     fun getHeadersInterceptor(): Interceptor = Interceptor { chain ->
         val request = chain.request().newBuilder()
-           // .addHeader(HEADER_USER_AGENT, HEADER_DEFAULT_USER_AGENT)
-          //  .addHeader(HEADER_ACCEPT, HEADER_DEFAULT_ACCEPT)
-          //  .addHeader(HEADER_CONTENT_TYPE, HEADER_DEFAULT_CONTENT_TYPE)
-          //  .addHeader(HEADER_DNT, HEADER_DEFAULT_DNT)
-          //  .addHeader(HEADER_ORIGIN, HEADER_DEFAULT_ORIGIN)
-          //  .addHeader(HEADER_REFERER, HEADER_DEFAULT_REFERER)
+            .addHeader(HEADER_USER_AGENT, HEADER_DEFAULT_USER_AGENT)
+            .addHeader(HEADER_ACCEPT, HEADER_DEFAULT_ACCEPT)
+            .addHeader(HEADER_CONTENT_TYPE, HEADER_DEFAULT_CONTENT_TYPE)
+            .addHeader(HEADER_DNT, HEADER_DEFAULT_DNT)
+            .addHeader(HEADER_ORIGIN, HEADER_DEFAULT_ORIGIN)
+            .addHeader(HEADER_REFERER, HEADER_DEFAULT_REFERER)
             .build()
         chain.proceed(request)
     }

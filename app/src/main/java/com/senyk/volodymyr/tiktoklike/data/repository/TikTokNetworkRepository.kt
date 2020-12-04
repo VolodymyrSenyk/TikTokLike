@@ -7,6 +7,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.senyk.volodymyr.tiktoklike.data.datasource.*
 import com.senyk.volodymyr.tiktoklike.data.datasource.model.response.UserInfoResponse
+import com.senyk.volodymyr.tiktoklike.data.datasource.model.response.VideoDetailsResponse
 import com.senyk.volodymyr.tiktoklike.data.datasource.model.response.VideosResponse
 import com.senyk.volodymyr.tiktoklike.domain.CookieRepository
 import com.senyk.volodymyr.tiktoklike.domain.TikTokRepository
@@ -208,6 +209,44 @@ class TikTokNetworkRepository @Inject constructor(
                 .observeOn(Schedulers.computation())
                 .flatMap { urlSigningCode ->
                     tikTokApi.getVideos(
+                        cookie = cookie,
+                        token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
+                        url = getFormattedUrl(
+                            endpoint = query,
+                            options = queryOptions.apply {
+                                put(
+                                    PARAM_SIGNATURE,
+                                    urlSigningCode
+                                )
+                            },
+                            fullUrl = false
+                        )
+                    )
+                }
+                .observeOn(AndroidSchedulers.mainThread())
+        }
+
+    override fun getVideoById(
+        videoId: String
+    ): Single<VideoDetailsResponse> = cookieRepository.getCookie()
+        .flatMap { cookie ->
+            val query = ENDPOINT_VIDEO
+            val queryOptions = mutableMapOf(
+                PARAM_APP_ID to PARAM_DEFAULT_APP_ID,
+                PARAM_LANGUAGE to PARAM_DEFAULT_LANGUAGE,
+                PARAM_LANG to PARAM_DEFAULT_LANGUAGE,
+                PARAM_AID to PARAM_DEFAULT_AID,
+                PARAM_ITEM_ID to videoId,
+                PARAM_COUNT to 30.toString(),
+                PARAM_MAX_CURSOR to PARAM_DEFAULT_MIN_CURSOR,
+                PARAM_MIN_CURSOR to PARAM_DEFAULT_MIN_CURSOR,
+                PARAM_SOURCE_TYPE to 8.toString(),
+                PARAM_TYPE to 1.toString(),
+            )
+            signUrl(url = getFormattedUrl(endpoint = query, options = queryOptions))
+                .observeOn(Schedulers.computation())
+                .flatMap { urlSigningCode ->
+                    tikTokApi.getVideoDetails(
                         cookie = cookie,
                         token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
                         url = getFormattedUrl(

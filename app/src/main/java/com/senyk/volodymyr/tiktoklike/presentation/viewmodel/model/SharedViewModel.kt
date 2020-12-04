@@ -25,7 +25,7 @@ class SharedViewModel @Inject constructor(
     }
 
     fun onTestClick() {
-        onFollowUserSimple()
+        onGetVideoPreviewImageClick()
     }
 
     fun onChainTestClick() {
@@ -87,6 +87,19 @@ class SharedViewModel @Inject constructor(
     fun onGetUserDetailsClick() {
         tikTokRepository.getUserDetails(userId = TEST_CURRENT_USER_LOGIN)
             .subscribeBy(this::onError) { onComplete("GetUserDetails completed") }
+            .apply(this::addDisposable)
+    }
+
+    fun onGetVideoPreviewImageClick() {
+        tikTokRepository.getVideoById(videoId = TEST_LINK.split("/").last())
+            .map { response ->
+                val preview = response.itemInfo?.itemStruct?.video?.cover
+                val originPreview = response.itemInfo?.itemStruct?.video?.originCover
+                Log.d(tag, "preview = $preview")
+                Log.d(tag, "originPreview = $originPreview")
+                response
+            }
+            .subscribeBy(this::onError) { onComplete("GetVideoPreviewImage completed") }
             .apply(this::addDisposable)
     }
 
@@ -187,6 +200,9 @@ class SharedViewModel @Inject constructor(
     companion object {
         private const val TEST_CURRENT_USER_LOGIN = "volodymyrsenyk0"
         private const val TEST_TARGET_USER_LOGIN = "markiv_anastasia"
+
+        private const val TEST_LINK =
+            "https://www.tiktok.com/foryou?lang=ru#/@markiv_anastasia/video/6902046223763623169"
 
         private const val CURRENT_USER_KEY = "current"
         private const val TARGET_USER_KEY = "target"
