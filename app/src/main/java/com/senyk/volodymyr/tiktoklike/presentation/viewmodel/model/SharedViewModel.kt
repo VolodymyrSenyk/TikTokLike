@@ -1,11 +1,10 @@
 package com.senyk.volodymyr.tiktoklike.presentation.viewmodel.model
 
 import android.util.Log
-import com.senyk.volodymyr.tiktoklike.data.datasource.model.inner.Items
 import com.senyk.volodymyr.tiktoklike.domain.CookieRepository
 import com.senyk.volodymyr.tiktoklike.domain.TikTokRepository
+import com.senyk.volodymyr.tiktoklike.presentation.util.GetHeadersForFollowJsClickUtil
 import com.senyk.volodymyr.tiktoklike.presentation.viewmodel.base.BaseRxViewModel
-import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.rxkotlin.subscribeBy
 import io.reactivex.schedulers.Schedulers
@@ -25,7 +24,11 @@ class SharedViewModel @Inject constructor(
     }
 
     fun onTestClick() {
-        onGetVideoPreviewImageClick()
+        onSetLikeClick()
+    }
+
+    fun onNewTestClick(headers: Map<String, String>) {
+        onFollowUserClick(headers)
     }
 
     fun onChainTestClick() {
@@ -69,15 +72,6 @@ class SharedViewModel @Inject constructor(
                     userId = currentUserId,
                     videoId = targetVideoId,
                     like = true
-                )
-            }
-            .andThen {
-                Log.d(tag, "currentUserId = $currentUserId")
-                Log.d(tag, "targetUserId = $targetUserId")
-                tikTokRepository.followUser(
-                    userId = currentUserId,
-                    userToFollowId = targetUserId,
-                    true
                 )
             }
             .subscribeBy(this::onError) { onComplete("Test completed") }
@@ -137,7 +131,7 @@ class SharedViewModel @Inject constructor(
             .apply(this::addDisposable)
     }
 
-    fun onFollowUserClick() {
+    fun onFollowUserClick(headers: Map<String, String>) {
         tikTokRepository.getUserDetails(userId = TEST_CURRENT_USER_LOGIN)
             .zipWith(tikTokRepository.getUserDetails(userId = TEST_TARGET_USER_LOGIN)) { currentUser, targetUser ->
                 mapOf(
@@ -147,53 +141,17 @@ class SharedViewModel @Inject constructor(
             }
             .flatMapCompletable { usersList ->
                 tikTokRepository.followUser(
-                    userId = usersList[CURRENT_USER_KEY]?.user?.id ?: "",
+                    a = headers[GetHeadersForFollowJsClickUtil.A] ?: "",
+                    b = headers[GetHeadersForFollowJsClickUtil.B] ?: "",
+                    c = headers[GetHeadersForFollowJsClickUtil.C] ?: "",
+                    d = headers[GetHeadersForFollowJsClickUtil.D] ?: "",
+                    f = headers[GetHeadersForFollowJsClickUtil.F] ?: "",
+                    url = "",
                     userToFollowId = usersList[TARGET_USER_KEY]?.user?.id ?: "",
                     follow = true
                 )
             }
             .subscribeBy(this::onError) { onComplete("FollowUser completed") }
-            .apply(this::addDisposable)
-    }
-
-    fun onFollowUserSimple() {
-        tikTokRepository.followUser(
-            userId = "6892969089498612741",
-            userToFollowId = "6661611121231036421",
-            follow = true
-        )
-            .subscribeBy(this::onError) { onComplete("FollowUser completed") }
-            .apply(this::addDisposable)
-    }
-
-    fun onFollowAllUsersFromTrendClick() {
-        var currentUserId = ""
-        tikTokRepository.getUserDetails(userId = TEST_CURRENT_USER_LOGIN)
-            .flatMap { user ->
-                currentUserId = user.userInfo?.user?.id ?: ""
-                tikTokRepository.getTrendingStream(userId = currentUserId)
-            }
-            .flatMapObservable { videos ->
-                Observable.create<Items> { emitter ->
-                    videos.items?.forEach { video ->
-                        video?.let { emitter.onNext(video) }
-                    }
-                    emitter.onComplete()
-                }
-            }
-            .flatMapSingle { video ->
-                tikTokRepository.getUserDetails(
-                    userId = video.author?.uniqueId ?: ""
-                )
-            }
-            .flatMapCompletable { user ->
-                tikTokRepository.followUser(
-                    userId = currentUserId,
-                    userToFollowId = user.userInfo?.user?.id ?: "",
-                    follow = true
-                )
-            }
-            .subscribeBy(this::onError) { onComplete("FollowAllUsers completed") }
             .apply(this::addDisposable)
     }
 

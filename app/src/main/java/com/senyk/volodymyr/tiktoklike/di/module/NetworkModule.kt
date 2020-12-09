@@ -24,10 +24,10 @@ class NetworkModule {
     @Singleton
     fun getOkHttpClient(
         httpLoggingInterceptor: HttpLoggingInterceptor,
-        headersInterceptor: Interceptor
+    //    headersInterceptor: Interceptor
     ): OkHttpClient = OkHttpClient.Builder()
         .addInterceptor(httpLoggingInterceptor)
-        .addInterceptor(headersInterceptor)
+    //    .addInterceptor(headersInterceptor)
         .build()
 
     @Provides
@@ -37,7 +37,7 @@ class NetworkModule {
         else HttpLoggingInterceptor.Level.NONE
     }
 
-    @Provides
+    /*@Provides
     @Singleton
     fun getHeadersInterceptor(): Interceptor = Interceptor { chain ->
         val request = chain.request().newBuilder()
@@ -49,7 +49,7 @@ class NetworkModule {
             .addHeader(HEADER_REFERER, HEADER_DEFAULT_REFERER)
             .build()
         chain.proceed(request)
-    }
+    }*/
 
     @Provides
     @Singleton

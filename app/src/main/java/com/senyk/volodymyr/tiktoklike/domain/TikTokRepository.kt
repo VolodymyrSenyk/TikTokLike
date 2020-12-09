@@ -25,5 +25,17 @@ interface TikTokRepository {
     fun likeVideo(videoId: String, userId: String, like: Boolean): Completable
 
     @CheckResult
-    fun followUser(userId: String, userToFollowId: String, follow: Boolean): Completable
+    fun followUser(
+        a: String,
+        b: String,
+        c: String,
+        d: String,
+        f: String,
+        url: String,
+        userToFollowId: String,
+        follow: Boolean
+    ): Completable
+
+    //@CheckResult
+    //fun checkUserFollowStatus(userId: String, userToFollowId: String, follow: Boolean): Completable
 }

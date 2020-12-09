@@ -11,14 +11,18 @@ import androidx.activity.viewModels
 import com.senyk.volodymyr.tiktoklike.R
 import com.senyk.volodymyr.tiktoklike.data.datasource.BASE_URL
 import com.senyk.volodymyr.tiktoklike.data.datasource.HEADER_DEFAULT_USER_AGENT
+import com.senyk.volodymyr.tiktoklike.presentation.util.IsFollowPageParserUtil
 import com.senyk.volodymyr.tiktoklike.presentation.view.base.BaseActivity
 import com.senyk.volodymyr.tiktoklike.presentation.viewmodel.model.SharedViewModel
 import kotlinx.android.synthetic.main.activity_main.*
-
+import javax.inject.Inject
 
 class MainActivity : BaseActivity() {
 
     override val layoutRes = R.layout.activity_main
+
+    @Inject
+    lateinit var isFollowPageParserUtil: IsFollowPageParserUtil
 
     val viewModel by viewModels<SharedViewModel>(factoryProducer = { viewModelFactory })
 
@@ -34,6 +38,13 @@ class MainActivity : BaseActivity() {
                 Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
             }
         })
+        isFollowPageParserUtil.isAlreadyFollowed.observe(this, { followed ->
+            Toast.makeText(
+                applicationContext,
+                if (followed) "This user is already followed by you" else "You can follow this user",
+                Toast.LENGTH_LONG
+            ).show()
+        })
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -47,7 +58,7 @@ class MainActivity : BaseActivity() {
             viewModel.onCookieGotClick(CookieManager.getInstance().getCookie(BASE_URL)); true
         }
         R.id.menuActionTestRequest -> {
-            viewModel.onTestClick(); true
+            isFollowPageParserUtil.check("markiv_anastasia"); true
         }
         else -> super.onOptionsItemSelected(menuItem)
     }

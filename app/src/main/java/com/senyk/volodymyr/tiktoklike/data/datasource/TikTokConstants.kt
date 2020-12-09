@@ -1,7 +1,10 @@
 package com.senyk.volodymyr.tiktoklike.data.datasource
 
-// Base URL
+// Base
 const val BASE_URL = "https://m.tiktok.com/"
+const val MOBILE_USER_AGENT = "Mozilla/5.0 (Linux; U; Android 2.2) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1"
+    //"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36"
+
 
 // Endpoints
 const val ENDPOINT_USER_DETAILS = "api/user/detail/"

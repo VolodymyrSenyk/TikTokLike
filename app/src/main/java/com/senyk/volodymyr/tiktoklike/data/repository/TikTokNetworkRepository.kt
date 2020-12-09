@@ -1,10 +1,7 @@
 package com.senyk.volodymyr.tiktoklike.data.repository
 
 import android.content.Context
-import android.util.Log
-import android.webkit.JavascriptInterface
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import com.senyk.volodymyr.tiktoklike.data.datasource.*
 import com.senyk.volodymyr.tiktoklike.data.datasource.model.response.UserInfoResponse
 import com.senyk.volodymyr.tiktoklike.data.datasource.model.response.VideoDetailsResponse
@@ -25,49 +22,12 @@ class TikTokNetworkRepository @Inject constructor(
 
     private val webView: WebView = WebView(context)
 
-    private val webViewParser: WebView = WebView(context)
-
     init {
         webView.settings.apply {
             javaScriptEnabled = true
             userAgentString = HEADER_DEFAULT_USER_AGENT
         }
         webView.loadUrl("")
-
-        webViewParser.settings.apply {
-            javaScriptEnabled = true
-            userAgentString = HEADER_DEFAULT_USER_AGENT
-        }
-        webViewParser.addJavascriptInterface(MyJavaScriptInterface(context), "HtmlViewer")
-        webViewParser.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView, url: String) {
-
-                /*if (url == "https://www.tiktok.com/@markiv_anastasia?source=h5_m") {
-                    webView.loadUrl(
-                        "javascript:(function(){" +
-                                "button=document.getElementsByTagName('button')[0];" +
-                                "console.log('Button 1 is ' + button);" +
-                                "})()"
-                    )
-                    webView.loadUrl(
-                        "javascript:(function(){" +
-                                "button=document.getElementsByClassName('follow-button')[0];" +
-                                "console.log('Button is ' + button);" +
-                                "event=document.createEvent('HTMLEvents');" +
-                                "event.initEvent('click',true,true);" +
-                                "button.dispatchEvent(event);" +
-                                "})()"
-                    )
-                } else {
-                    Log.e("OkHttp", url)
-                }*/
-
-                webViewParser.loadUrl(
-                    "javascript:window.HtmlViewer.showHTML" +
-                            "('<html>'+document.getElementsByTagName('html')[0].innerHTML+'</html>');"
-                )
-            }
-        }
     }
 
     override fun likeVideo(
@@ -94,6 +54,7 @@ class TikTokNetworkRepository @Inject constructor(
                 .observeOn(Schedulers.computation())
                 .flatMap { urlSigningCode ->
                     tikTokApi.setLike(
+                        standardHeaders = TikTokApi.standardHeaders,
                         cookie = cookie,
                         token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
                         url = getFormattedUrl(
@@ -128,6 +89,7 @@ class TikTokNetworkRepository @Inject constructor(
                     .observeOn(Schedulers.computation())
                     .flatMap { urlSigningCode ->
                         tikTokApi.getUser(
+                            standardHeaders = TikTokApi.standardHeaders,
                             cookie = cookie,
                             token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
                             url = getFormattedUrl(
@@ -169,6 +131,7 @@ class TikTokNetworkRepository @Inject constructor(
                     .observeOn(Schedulers.computation())
                     .flatMap { urlSigningCode ->
                         tikTokApi.getVideos(
+                            standardHeaders = TikTokApi.standardHeaders,
                             cookie = cookie,
                             token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
                             url = getFormattedUrl(
@@ -209,6 +172,7 @@ class TikTokNetworkRepository @Inject constructor(
                 .observeOn(Schedulers.computation())
                 .flatMap { urlSigningCode ->
                     tikTokApi.getVideos(
+                        standardHeaders = TikTokApi.standardHeaders,
                         cookie = cookie,
                         token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
                         url = getFormattedUrl(
@@ -247,6 +211,7 @@ class TikTokNetworkRepository @Inject constructor(
                 .observeOn(Schedulers.computation())
                 .flatMap { urlSigningCode ->
                     tikTokApi.getVideoDetails(
+                        standardHeaders = TikTokApi.standardHeaders,
                         cookie = cookie,
                         token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
                         url = getFormattedUrl(
@@ -262,6 +227,82 @@ class TikTokNetworkRepository @Inject constructor(
                     )
                 }
                 .observeOn(AndroidSchedulers.mainThread())
+        }
+
+    override fun followUser(
+        a: String,
+        b: String,
+        c: String,
+        d: String,
+        f: String,
+        url: String,
+        userToFollowId: String,
+        follow: Boolean
+    ): Completable = cookieRepository.getCookie()
+        .flatMapCompletable { cookie ->
+            val query = ENDPOINT_FOLLOW_USER
+            val queryOptions = mutableMapOf(
+                PARAM_AID to PARAM_DEFAULT_AID,
+            //    "app_name" to "tiktok_web",
+           //     "device_platform" to "web_pc",
+                "referer" to "",
+                "root_referer" to "https:%2F%2Fwww.google.com%2F",
+                "user_agent" to "Mozilla%2F5.0+(Macintosh%3B+Intel+Mac+OS+X+10_15_7)+AppleWebKit%2F537.36+(KHTML,+like+Gecko)+Chrome%2F86.0.4240.198+Safari%2F537.36",
+                PARAM_COOKIE_ENABLED to PARAM_DEFAULT_COOKIE_STATUS,
+             //   "screen_width" to 1920.toString(),
+            //    "screen_height" to 1080.toString(),
+            //    "browser_language" to "ru-RU",
+            //    "browser_platform" to "MacIntel",
+            //    "browser_name" to "Mozilla",
+            //    "browser_version" to "5.0+(Macintosh%3B+Intel+Mac+OS+X+10_15_7)+AppleWebKit%2F537.36+(KHTML,+like+Gecko)+Chrome%2F86.0.4240.198+Safari%2F537.36",
+           //     "browser_online" to true.toString(),
+                "ac" to "4g",
+                //    "timezone_name" to "Europe%2FKiev",
+                //   "page_referer" to "https:%2F%2Fwww.tiktok.com%2F",
+                //  "priority_region" to "",
+                "verifyFp" to "verify_khlv3g19_MFc8LiTO_QXfi_48KB_9g1G_5f8bq9kBPx5m",
+                PARAM_APP_ID to PARAM_DEFAULT_APP_ID,
+                //  "region" to "UA",
+                //   "appType" to "m",
+                //  "isAndroid" to false.toString(),
+                //  "isMobile" to false.toString(),
+                //   "isIOS" to false.toString(),
+                //   "OS" to "mac",
+                PARAM_DID to getDataFromCookie(cookie = cookie, key = COOKIE_KEY_DEVICE_ID),
+                PARAM_DEVICE_ID to getDataFromCookie(cookie = cookie, key = COOKIE_KEY_DEVICE_ID),
+                PARAM_TYPE to 1.toString(),
+                PARAM_USER_ID_UNDERSCORED to userToFollowId,
+                "from" to 19.toString(),
+                "channel_id" to 3.toString(),
+                "from_pre" to 0.toString(),
+                //   "app_language" to "ru",
+                //   "current_region" to "UA",
+                //     "fromWeb" to 1.toString(),
+            )
+            signUrl(url = getFormattedUrl(endpoint = query, options = queryOptions))
+                .observeOn(Schedulers.computation())
+                .map { urlSigningCode ->
+                    getFormattedUrl(
+                        endpoint = query,
+                        options = queryOptions.apply {
+                            put(PARAM_SIGNATURE, urlSigningCode)
+                        },
+                        fullUrl = false
+                    )
+                }
+                .flatMapCompletable { url ->
+                    tikTokApi.followUserPost(
+                        followRequestHeaders = TikTokApi.followRequestHeaders,
+                        a = a,
+                        b = b,
+                        c = c,
+                        d = d,
+                        f = f,
+                        cookie = cookie,
+                        token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
+                        url = url
+                    )
+                }.observeOn(AndroidSchedulers.mainThread())
         }
 
     // gets _signature parameter, that needs almost all requests
@@ -312,111 +353,4 @@ class TikTokNetworkRepository @Inject constructor(
     private fun Boolean.toInt(): Int = if (this) 1 else 0
 
     private fun Int.toBoolean(): Boolean = this != 0
-
-    override fun followUser(
-        userId: String,
-        userToFollowId: String,
-        follow: Boolean
-    ): Completable {
-        webViewParser.loadUrl("https://www.tiktok.com/@markiv_anastasia?source=h5_m")
-
-        return Completable.complete()
-    } /*cookieRepository.getCookie()
-        .flatMapCompletable { cookie ->
-            val query = ENDPOINT_FOLLOW_USER
-            val queryOptions = mutableMapOf(
-                "aid" to 1988.toString(),
-                "app_name" to "tiktok_web",
-                "device_platform" to "web_pc",
-                "referer" to "",
-                "root_referer" to "https:%2F%2Fwww.google.com%2F",
-                "user_agent" to "Mozilla%2F5.0+(Macintosh%3B+Intel+Mac+OS+X+10_15_7)+AppleWebKit%2F537.36+(KHTML,+like+Gecko)+Chrome%2F86.0.4240.198+Safari%2F537.36",
-                "cookie_enabled" to true.toString(),
-                "screen_width" to 1920.toString(),
-                "screen_height" to 1080.toString(),
-                "browser_language" to "ru-RU",
-                "browser_platform" to "MacIntel",
-                "browser_name" to "Mozilla",
-                "browser_version" to "5.0+(Macintosh%3B+Intel+Mac+OS+X+10_15_7)+AppleWebKit%2F537.36+(KHTML,+like+Gecko)+Chrome%2F86.0.4240.198+Safari%2F537.36",
-                "browser_online" to true.toString(),
-                "ac" to "4g",
-                "timezone_name" to "Europe%2FKiev",
-                "page_referer" to "https:%2F%2Fwww.tiktok.com%2F",
-                "priority_region" to "",
-                "verifyFp" to "verify_khlv3g19_MFc8LiTO_QXfi_48KB_9g1G_5f8bq9kBPx5m",
-                "appId" to 1233.toString(),
-                "region" to "UA",
-                "appType" to "m",
-                "isAndroid" to false.toString(),
-                "isMobile" to false.toString(),
-                "isIOS" to false.toString(),
-                "OS" to "mac",
-                "did" to "6896044981934900742",
-                "device_id" to "6896044981934900742",
-                "type" to 1.toString(),
-                "user_id" to "6889113253596152834",
-                "from" to 19.toString(),
-                "channel_id" to 3.toString(),
-                "from_pre" to 0.toString(),
-                "app_language" to "ru",
-                "current_region" to "UA",
-                "fromWeb" to 1.toString(),
-            )
-            signUrl(url = getFormattedUrl(endpoint = query, options = queryOptions))
-                .observeOn(Schedulers.computation())
-                .map { urlSigningCode ->
-                    getFormattedUrl(
-                        endpoint = query,
-                        options = queryOptions.apply {
-                            put(PARAM_SIGNATURE, "_02B4Z6wo00901e2PLDQAAICCbGHgTgEp7G3tjiiAACSt6d")
-                        },
-                        fullUrl = false
-                    )
-                }
-                .flatMapCompletable { url ->
-                    tikTokApi.followUserPost(
-                        //   cookie = cookie,
-                        //   token = getDataFromCookie(cookie = cookie, key = COOKIE_KEY_CSRF_TOKEN),
-                        url = url
-                    )
-                }.observeOn(AndroidSchedulers.mainThread())
-        }*/
-
-    inner class MyJavaScriptInterface(private val context: Context) {
-        @JavascriptInterface
-        fun showHTML(html: String?) {
-            if (html == null) return
-            val maxLogSize = 1000
-            for (i in 0..html.length / maxLogSize) {
-                val start = i * maxLogSize
-                var end = (i + 1) * maxLogSize
-                end = if (end > html.length) html.length else end
-                val log = html.substring(start, end)
-                if (log.contains("follow-button jsx-3251180706 jsx-683523640 share-follow tiktok-btn-pc tiktok-btn-pc-medium")) {
-                    this@TikTokNetworkRepository.webViewParser.evaluateJavascript(
-                        "javascript:(function(){" +
-                                "button=document.getElementsByClassName('follow-button')[0];" +
-                                "console.log('Button is ' + button);" +
-                                "event=document.createEvent('HTMLEvents');" +
-                                "event.initEvent('click',true,true);" +
-                                "button.dispatchEvent(event);" +
-                                "})()"
-                    ) {
-                        Log.e("OkHttp", it)
-                    }
-                }
-            }
-        }
-        /* @JavascriptInterface
-         fun showHTML(html: String?) {
-             if (html == null) return
-             val maxLogSize = 1000
-             for (i in 0..html.length / maxLogSize) {
-                 val start = i * maxLogSize
-                 var end = (i + 1) * maxLogSize
-                 end = if (end > html.length) html.length else end
-                 Log.v("OkHttp", html.substring(start, end))
-             }
-         }*/
-    }
 }
